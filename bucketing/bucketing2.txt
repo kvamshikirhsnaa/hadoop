@@ -1,0 +1,136 @@
+EX1(single bucketing):
+---------------------
+creating normal(non-bucketing) table and loading input data into table:
+-----------------------------------------------------------------------
+hive> create table trans1(pid string,amt int) row format delimited 
+      fields terminated by ',';
+
+hive> load data local inpath 'trans1.txt' into table trans1;
+
+hive> select * from trans;
+OK
+p1	1000
+p2	2000
+p3	3000
+p4	5000
+p5	6000
+p1	7000
+p2	4000
+p3	9000
+p4	10000
+p5	20000
+p3	80000
+p5	5000
+p1	9000
+p6	50000
+p4	30000
+p1	9000
+p2	8000
+p3	10000
+p4	60000
+p5	80000
+p3	90000
+p4	100000
+p5	40000
+p3	10000
+p5	50000
+p6	80000
+p6	10000
+
+
+creating bucket table and insering data from normal table to bucket table:
+--------------------------------------------------------------------------
+hive> create table trans_buck(pid string,amt int) clustered by (pid) into 3 buckets;
+
+
+hive> insert overwrite table trans_buck select * from trans1;
+
+gopalkrishna@ubuntu:~/hive$ hadoop fs -ls /user/hive/warehouse/trans_buck/
+Found 3 items
+-rwxr-xr-x   1 gopalkrishna supergroup         76 2018-06-27 01:11 /user/hive/warehouse/trans_buck/000000_0
+-rwxr-xr-x   1 gopalkrishna supergroup         79 2018-06-27 01:11 /user/hive/warehouse/trans_buck/000001_0
+-rwxr-xr-x   1 gopalkrishna supergroup         77 2018-06-27 01:11 /user/hive/warehouse/trans_buck/000002_0
+(here 3 files are 3 buckets)
+
+hive> select * from trans_buck;
+OK
+p1	1000
+p2	2000
+p3	3000
+p4	5000
+p5	6000
+p1	7000
+p2	4000
+p3	9000
+p4	10000
+p5	20000
+p3	80000
+p5	5000
+p1	9000
+p6	50000
+p4	30000
+p1	9000
+p2	8000
+p3	10000
+p4	60000
+p5	80000
+p3	90000
+p4	100000
+p5	40000
+p3	10000
+p5	50000
+p6	80000
+p6	10000
+
+hive> describe extended trans_buck;
+OK
+pid                 	string              	                    
+amt                 	int                 	                    
+	 	 
+Detailed Table Information	Table(tableName:trans_buck, dbName:default, owner:gopalkrishna, createTime:1530086852, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:pid, type:string, comment:null), FieldSchema(name:amt, type:int, comment:null)], location:hdfs://localhost:8020/user/hive/warehouse/trans_buck, inputFormat:org.apache.hadoop.mapred.TextInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat, compressed:false, numBuckets:3, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=1}), bucketCols:[pid], sortCols:[], parameters:{}, skewedInfo:SkewedInfo(skewedColNames:[], skewedColValues:[], skewedColValueLocationMaps:{}), storedAsSubDirectories:false), partitionKeys:[], parameters:{numFiles=3, COLUMN_STATS_ACCURATE=true, transient_lastDdlTime=1530087092, numRows=27, totalSize=232, rawDataSize=205}, viewOriginalText:null, viewExpandedText:null, tableType:MANAGED_TABLE)	
+Time taken: 0.512 seconds, Fetched: 4 row(s)
+
+hive> select * from trans_buck where pid='p3';
+OK
+p3	3000
+p3	9000
+p3	80000
+p3	10000
+p3	90000
+p3	10000
+
+hive> select * from trans_buck where pid='p6';
+OK
+p6	50000
+p6	80000
+p6	10000
+
+hive> select * from trans_buck where pid>'p4';
+OK
+p5	6000
+p5	20000
+p5	5000
+p6	50000
+p5	80000
+p5	40000
+p5	50000
+p6	80000
+p6	10000
+
+hive> select pid,max(amt) from trans_buck group by pid;
+OK
+p1	9000
+p2	8000
+p3	90000
+p4	100000
+p5	80000
+p6	80000
+
+
+
+
+
+
+
+
+

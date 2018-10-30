@@ -1,0 +1,51 @@
+ex: emp table has 4 buckets.
+
+hive>select * from emp TABLESAMPLE(BUCKET 1 OUT OF 4);
+
+n/y :-
+------
+4/4 = 1 group which contains (1,2,3,4)' so it will pick 1st bucket out of group of 4.
+TABLESAMPLE(BUCKET 2 OUT OF 8)
+4/8 = ½ (half group, 1,2,3,4….8 we have only 4 buckets, so 5,6,7,8 are not buckets) so it will 
+pick 2nd bucket
+
+here n is no.of buckets.
+
+How Sampling Works:
+-------------------
+When you create the table and bucket it using the clustered by clause into 32 buckets
+(as an example), hive buckets your data into 32 buckets using deterministic hash functions. 
+Then when you use TABLESAMPLE(BUCKET x OUT OF y), hive divides your buckets into groups of 
+y buckets and then picks the xth bucket of each group. 
+For example:
+
+1) if you use TABLESAMPLE(BUCKET 6 OUT OF 8), hive would divide your 32 buckets into groups of 8 
+   buckets resulting in 4 groups of 8 buckets and then picks the 6th bucket of each group, hence 
+    picking the buckets 6, 14, 22, 30. 
+2) if TABLESAMPLE(BUCKET 23 OUT OF 32), hive would divide your 32 buckets 
+   into groups of 32, resulting in only 1 group of 32 buckets, and then picks the 23rd bucket as 
+   your result. 
+3) if you use TABLESAMPLE(BUCKET 3 OUT OF 64), hive would divide your 32 buckets into groups of 
+   64 buckets, resulting in 1 group of 64 “half-bucket”s and then picks the half-bucket that 
+   corresponds to the 3rd full-bucket.
+
+
+Note: Set the no of reducers = no of buckets
+set map.reduce.tasks = 25
+set hive.enforce.bucketing = true;
+
+NOTE: In partitioned tables when we issue a query only the required partitions are scanned, 
+no need to specify any hints in your hive query. But for bucketed tables it is not the case, 
+you need to hint your hive query if you want to scan some particular buckets else the whole set 
+of files would be scanned. We hint the buckets using TABLESAMPLE clause in our hive query. 
+
+For example in our example if we want to choose only the data from BUCKET 2
+
+hive> SELECT * FROM sample_buckets1 TABLESAMPLE(BUCKET 2 OUT OF 5 ON key);
+
+
+
+
+
+
+

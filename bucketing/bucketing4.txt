@@ -1,0 +1,184 @@
+hive> create table empl(id int,name string,sal int,sex string,dno int)
+    > row format delimited
+    > fields terminated by ',';
+OK
+
+hive> load data local inpath 'emp3.txt' into table empl;
+
+hive> select * from empl;
+OK
+301	shiva	10000	M	12
+302	anitha	10000	F	11
+303	charan	20000	M	13
+304	anjali	40000	F	14
+305	krishna	50000	M	13
+306	surya	40000	M	12
+307	vikram	50000	M	15
+308	ravi	90000	M	14
+309	esha	80000	F	11
+310	divya	80000	F	15
+311	aishwarya	70000	F	12
+312	ajit	90000	M	14
+313	raju	80000	M	15
+314	swathi	50000	F	13
+315	ishita	80000	F	14
+
+
+hive> set hive.enforce.bucketing=true;
+hive> set hive.enforce.bucketing;
+hive.enforce.bucketing=true
+
+Creating bucket table:
+----------------------
+hive> create table empl_buck2(id int,name string,sal int,sex string,
+      dno int) clustered by(dno,sex) into 3 buckets
+      row format delimited
+      fields terminated by ',';
+OK
+
+Loading data from file to bucketed table:
+-----------------------------------------
+hive> load data local inpath 'emp3.txt' into table empl_buck;
+
+hive> select * from empl_buck;
+OK
+301	shiva	10000	M	12
+302	anitha	10000	F	11
+303	charan	20000	M	13
+304	anjali	40000	F	14
+305	krishna	50000	M	13
+306	surya	40000	M	12
+307	vikram	50000	M	15
+308	ravi	90000	M	14
+309	esha	80000	F	11
+310	divya	80000	F	15
+311	aishwarya	70000	F	12
+312	ajit	90000	M	14
+313	raju	80000	M	15
+314	swathi	50000	F	13
+315	ishita	80000	F	14
+
+hive> select * from empl_buck TABLESAMPLE(bucket 1 out of 2);
+OK
+303	charan	20000	M	13
+304	anjali	40000	F	14
+305	krishna	50000	M	13
+307	vikram	50000	M	15
+311	aishwarya	70000	F	12
+313	raju	80000	M	15
+315	ishita	80000	F	14
+
+hive> select * from empl_buck TABLESAMPLE(bucket 2 out of 2);
+OK
+301	shiva	10000	M	12
+302	anitha	10000	F	11
+306	surya	40000	M	12
+308	ravi	90000	M	14
+309	esha	80000	F	11
+310	divya	80000	F	15
+312	ajit	90000	M	14
+314	swathi	50000	F	13
+
+NOTE: when we load data from file to bucketed table in hdfs we get only one file under
+      bucketed directory.
+
+gopalkrishna@ubuntu:~$ hadoop fs -ls /user/hive/warehouse/vamshi.db/empl_buck
+Found 1 items
+-rwxr-xr-x   1 gopalkrishna supergroup        323 2018-07-05 04:13 /user/hive/warehouse/vamshi.db/empl_buck/emp3.txt
+
+
+Inserting data from existed table to bucketed table:
+----------------------------------------------------
+hive> insert into table empl_buck1 select * from empl;
+
+hive> select * from empl_buck1 tablesample(bucket 1 out of 3);
+OK
+309	esha	80000	F	11
+315	ishita	80000	F	14
+304	anjali	40000	F	14
+305	krishna	50000	M	13
+303	charan	20000	M	13
+302	anitha	10000	F	11
+
+hive> select * from empl_buck1 tablesample(bucket 2 out of 3);
+OK
+308	ravi	90000	M	14
+312	ajit	90000	M	14
+311	aishwarya	70000	F	12
+310	divya	80000	F	15
+
+hive> select * from empl_buck1 tablesample(bucket 3 out of 3);
+OK
+306	surya	40000	M	12
+307	vikram	50000	M	15
+313	raju	80000	M	15
+314	swathi	50000	F	13
+301	shiva	10000	M	12
+
+hive> select * from empl_buck1 tablesample(bucket 1 out of 2);
+OK
+315	ishita	80000	F	14
+304	anjali	40000	F	14
+305	krishna	50000	M	13
+303	charan	20000	M	13
+311	aishwarya	70000	F	12
+307	vikram	50000	M	15
+313	raju	80000	M	15
+
+hive> select * from empl_buck1 tablesample(bucket 2 out of 2);
+OK
+309	esha	80000	F	11
+302	anitha	10000	F	11
+308	ravi	90000	M	14
+312	ajit	90000	M	14
+310	divya	80000	F	15
+306	surya	40000	M	12
+314	swathi	50000	F	13
+301	shiva	10000	M	12
+
+hive> select * from empl_buck1 tablesample(bucket 1 out of 4);
+OK
+315	ishita	80000	F	14
+304	anjali	40000	F	14
+305	krishna	50000	M	13
+303	charan	20000	M	13
+
+hive> select * from empl_buck1 tablesample(bucket 1 out of 10);
+OK
+305	krishna	50000	M	13
+303	charan	20000	M	13
+
+hive> select * from empl_buck1 tablesample(bucket 1 out of 100);
+OK
+
+hive> select * from empl_buck1 tablesample(bucket 1 out of 1);
+OK
+309	esha	80000	F	11
+315	ishita	80000	F	14
+304	anjali	40000	F	14
+305	krishna	50000	M	13
+303	charan	20000	M	13
+302	anitha	10000	F	11
+308	ravi	90000	M	14
+312	ajit	90000	M	14
+311	aishwarya	70000	F	12
+310	divya	80000	F	15
+306	surya	40000	M	12
+307	vikram	50000	M	15
+313	raju	80000	M	15
+314	swathi	50000	F	13
+301	shiva	10000	M	12
+
+NOTE: we can write as many times as bucket out of on singel bucketed table. every time we change
+      bucket size the data size may reduce or increase.
+
+
+NOTE: when we load data from existed table to bucketed table in hdfs how many buckets we 
+      triggered, those many files will be generated under bucketed table directory.
+
+gopalkrishna@ubuntu:~$ hadoop fs -ls /user/hive/warehouse/vamshi.db/empl_buck1
+Found 3 items
+-rwxr-xr-x   1 gopalkrishna supergroup        131 2018-07-05 09:02 /user/hive/warehouse/vamshi.db/empl_buck1/000000_0
+-rwxr-xr-x   1 gopalkrishna supergroup         86 2018-07-05 09:02 /user/hive/warehouse/vamshi.db/empl_buck1/000001_0
+-rwxr-xr-x   1 gopalkrishna supergroup        106 2018-07-05 09:02 /user/hive/warehouse/vamshi.db/empl_buck1/000002_0
+

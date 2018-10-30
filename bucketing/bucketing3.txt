@@ -1,0 +1,108 @@
+EX2(multi bucketing):
+---------------------
+hive> create table emp_buck(id int,name string,sal int,sex string,dno int) clustered by (dno,sex) 
+      into 2 buckets row format delimited fields terminated by '\t';
+
+hive> insert overwrite table emp_buck select * from emp;
+
+gopalkrishna@ubuntu:~/hive$ hadoop fs -ls /user/hive/warehouse/emp_buck/
+Found 2 items
+-rwxr-xr-x   1 gopalkrishna supergroup        349 2018-06-27 01:21 /user/hive/warehouse/emp_buck/000000_0
+-rwxr-xr-x   1 gopalkrishna supergroup        233 2018-06-27 01:21 /user/hive/warehouse/emp_buck/000001_0
+
+(here 2 files are 2 buckets)
+
+hive> select * from emp_buck;
+OK
+101	mahesh	20000	M	11
+102	priya	30000	F	12
+103	naresh	40000	M	13
+104	swetha	50000	F	12
+105	pavan	60000	M	13
+106	laxmi	70000	F	11
+201	anil	60000	M	11
+202	neha	80000	F	12
+203	suresh	90000	M	13
+204	amisha	70000	F	11
+205	vyshali	50000	F	12
+206	kalyani	80000	F	13
+301	shiva	10000	m	12
+302	anitha	10000	f	11
+303	charan	20000	m	13
+304	anjali	40000	f	14
+305	krishna	50000	m	13
+306	surya	40000	m	12
+307	vikram	50000	m	15
+308	ravi	90000	m	14
+309	esha	80000	f	11
+310	divya	80000	f	15
+311	aishwarya	70000	f	12
+312	ajit	90000	m	14
+313	raju	80000	m	15
+314	swathi	50000	f	13
+315	ishita	80000	f	14
+
+hive> describe extended emp_buck;
+OK
+id                  	int                 	                    
+name                	string              	                    
+sal                 	int                 	                    
+sex                 	string              	                    
+dno                 	int                 	                    
+	 	 
+Detailed Table Information	Table(tableName:emp_buck, dbName:default, owner:gopalkrishna, createTime:1530087578, lastAccessTime:0, retention:0, sd:StorageDescriptor(cols:[FieldSchema(name:id, type:int, comment:null), FieldSchema(name:name, type:string, comment:null), FieldSchema(name:sal, type:int, comment:null), FieldSchema(name:sex, type:string, comment:null), FieldSchema(name:dno, type:int, comment:null)], location:hdfs://localhost:8020/user/hive/warehouse/emp_buck, inputFormat:org.apache.hadoop.mapred.TextInputFormat, outputFormat:org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat, compressed:false, numBuckets:2, serdeInfo:SerDeInfo(name:null, serializationLib:org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe, parameters:{serialization.format=	, field.delim=
+Time taken: 1.045 seconds, Fetched: 7 row(s)
+
+hive> select * from emp_buck where sex='f';
+OK
+302	anitha	10000	f	11
+304	anjali	40000	f	14
+309	esha	80000	f	11
+310	divya	80000	f	15
+311	aishwarya	70000	f	12
+314	swathi	50000	f	13
+315	ishita	80000	f	14
+
+hive> select * from emp_buck where sex='F';
+OK
+102	priya	30000	F	12
+104	swetha	50000	F	12
+106	laxmi	70000	F	11
+202	neha	80000	F	12
+204	amisha	70000	F	11
+205	vyshali	50000	F	12
+206	kalyani	80000	F	13
+
+hive> select * from emp_buck where dno=12 and sex='F';
+OK
+102	priya	30000	F	12
+104	swetha	50000	F	12
+202	neha	80000	F	12
+205	vyshali	50000	F	12
+
+hive> select * from emp_buck where dno=12 or sex='F';
+OK
+102	priya	30000	F	12
+104	swetha	50000	F	12
+106	laxmi	70000	F	11
+202	neha	80000	F	12
+204	amisha	70000	F	11
+205	vyshali	50000	F	12
+206	kalyani	80000	F	13
+301	shiva	10000	m	12
+306	surya	40000	m	12
+311	aishwarya	70000	f	12
+
+hive> select * from emp_buck where dno<13 and sex='m';
+OK
+301	shiva	10000	m	12
+306	surya	40000	m	12
+
+
+NOTE: above results will run mapreduce scan all bucketed files. this is not way of using bucketed tables.
+      we have to use tablesampling on bucketed tables to achieve results very fast.
+
+ 
+
+
+
